@@ -20,7 +20,7 @@ class SendMailService {
             this.client = transporter;
         })
     }
-    async execute(to: string, subject: string, variables: objects, path: string) {
+    async execute(to: string, subject: string, variables: object, path: string) {
         //const npsPath = resolve(__dirname, "..", "views", "emails", "npsMail.hbs");
         const templateFileContent = fs.readFileSync(path).toString("utf8");
 

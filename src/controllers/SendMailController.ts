@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { resolve } from 'path';
 import { getCustomRepository } from "typeorm";
+import { AppError } from '../errors/AppError';
 import { SurveysRepository } from "../repositories/SurveysRepository";
 import { SurveysUsersRepository } from "../repositories/SurveysUsersRepository";
 import { UsersRepository } from "../repositories/UsersRepository";
@@ -25,30 +26,27 @@ class SendMailController {
         const survey = await surveysRepository.findOne({ id: survey_id });
 
         if (!survey) {
-            return response.status(400).json({
-                error: "Survey does not exits"
-            });
-        }
-
-        const variables = {
-            name: user.name,
-            title: survey.title,
-            description: survey.description,
-            user_id: user.id,
-            link: process.env.URL_MAIL
+            throw new AppError("Survey does not exits!");
         }
 
         const npsPath = resolve(__dirname, "..", "views", "emails", "npsMail.hbs");
 
         const surveyUserAlreadyExits = await surveysUsersRepository.findOne({
-            where: [
-                { user_id: user.id },
-                { value: null }
-            ],
+            where: { user_id: user.id, value: null }
+            ,
             relations: ["user", "survey"]
         });
 
+        const variables = {
+            name: user.name,
+            title: survey.title,
+            description: survey.description,
+            id: "",
+            link: process.env.URL_MAIL
+        }
+
         if (surveyUserAlreadyExits) {
+            variables.id = surveyUserAlreadyExits.id;
             await SendMailService.execute(email, survey.title, variables, npsPath);
             return response.json(surveyUserAlreadyExits);
         }
@@ -62,6 +60,7 @@ class SendMailController {
         await surveysUsersRepository.save(surveyUser);
 
         //Enviar email para o usuario
+        variables.id = surveyUser.id;
 
         await SendMailService.execute(email, survey.title, variables, npsPath);
 
